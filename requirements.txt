@@ -1,0 +1,7 @@
+flask==2.1.2
+Pillow==9.5.0
+requests
+flask_cors
+matplotlib
+opencv-python
+ultralytics

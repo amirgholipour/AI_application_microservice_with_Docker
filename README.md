@@ -1,1 +1,1 @@
-# image_processing_microservice_with_Docker
+# image_classification_microservice

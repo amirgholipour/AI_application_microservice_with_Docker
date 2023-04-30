@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Classifier</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #3d7cb0 0%, #10c1ed 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 130vh;
+            margin: 0;
+            padding: 1rem;
+            position: relative;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        form {
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 1rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
+            position: absolute;
+            top: 3.5rem;
+            left: 2rem;
+        }
+        input[type="file"] {
+            color: transparent;
+            font-size: 1rem;
+        }
+        input[type="submit"] {
+            background-color: #38ef7d;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        input[type="submit"]:hover {
+            background-color: #1abc9c;
+        }
+        #results {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+            max-width: 1000px;
+            position: absolute;
+            top: 10rem;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #results > * {
+            margin-bottom: 1rem;
+        }
+
+        #image-segmentation-object-detection {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+            justify-content: center;
+        }
+
+        #detected-objects-container {
+            width: 300px;
+            height: 300px;
+            border: 2px solid white;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #detected-objects-image {
+            max-width: 100%;
+            max-height: 100%;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Processing</h1>
+    <form>
+        <input type="file" name="image" accept="image/*">
+        <input type="submit" value="Process Image">
+    </form>
+    <div id="results">
+        <div id="image-container">
+            <img id="image" src="#" alt="">
+        </div>
+        <div id="top-prediction"></div>
+        <div id="chart-container">
+            <canvas id="chart-canvas"></canvas>
+        </div>
+        <div id="image-segmentation-object-detection">
+            <div id="segmented-image-container">
+                <img id="segmented-image" src="#" alt="">
+            </div>
+            <div id="detected-objects-container">
+                <img id="detected-objects-image" src="#" alt="">
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+ const form = document.querySelector("form");
+        const image = document.querySelector("#image");
+        const predictionsList = document.querySelector("#predictions");
+        const chartCanvas = document.querySelector("#chart-canvas");
+        const segmentedCanvas = document.querySelector("#segmented-image");
+        const detectedObjectsImage = document.querySelector("#detected-objects-image");
+        let chart;
+        
+        form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formData = new FormData(form);
+    const response = await fetch("http://127.0.0.1:5005/classify_segment_detect", {
+        method: "POST",
+        body: formData
+    });
+    const result = await response.json();
+    if (result.error) {
+        alert(result.error);
+        return;
+    }
+
+    // Display selected image
+    const fileInput = form.querySelector('input[type="file"]');
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        image.src = e.target.result;
+        image.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+
+    // Display top prediction
+    const topPrediction = document.querySelector("#top-prediction");
+    topPrediction.textContent = `Top Prediction: ${result.top_5_predictions[0][0]} (${(result.top_5_predictions[0][1] * 100).toFixed(2)}%)`;
+
+    // Update chart
+    if (chart) {
+        chart.destroy();
+    }
+    const ctx = chartCanvas.getContext("2d");
+    const chartLabels = [];
+    const chartData = [];
+    for (const prediction of result.top_5_predictions) {
+        chartLabels.push(prediction[0]);
+        chartData.push((prediction[1] * 100).toFixed(2));
+    }
+    chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: chartLabels,
+            datasets: [{
+                label: "Top 5 Predictions",
+                data: chartData,
+                backgroundColor: [
+                    "rgba(255, 99, 132, 0.2)",
+                    "rgba(255, 159, 64, 0.2)",
+                    "rgba(255, 205, 86, 0.2)",
+                    "rgba(75, 192, 192, 0.2)",
+                    "rgba(153, 102, 255, 0.2)"
+                ],
+                borderColor: [
+                    "rgba(255, 99, 132, 1)",
+                    "rgba(255, 159, 64, 1)",
+                    "rgba(255, 205, 86, 1)",
+                    "rgba(75, 192, 192, 1)",
+                    "rgba(153, 102, 255, 1)"
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            elements: {
+                bar: {
+                    borderRadius: 5,
+                    borderColor: "rgba(255, 255, 255, 0.5)",
+                    borderWidth(context) {
+                        const dataset = context.chart.data.datasets[context.datasetIndex];
+                        const index = context.dataIndex;
+                        const value = dataset.data[index];
+                        return value === Math.max(...dataset.data) ? 2 : 0;
+                    }
+                }
+            }
+        }
+    });
+
+    // Display segmented image
+    const segmentedImage = document.querySelector("#segmented-image");
+    segmentedImage.src = "data:image/png;base64," + result.segmented_image;
+    segmentedImage.style.display = "block";
+
+    // Display detected objects image
+    const detectedObjectsBase64 = result.detected_objects;
+    detectedObjectsImage.src = "data:image/png;base64," + detectedObjectsBase64;
+    detectedObjectsImage.style.display = "block";
+
+});    </script>
+</body>
+</html>    
