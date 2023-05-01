@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Classifier</title>
+    <title>Image Understanding</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -100,7 +100,7 @@
     </style>
 </head>
 <body>
-    <h1>Image Processing</h1>
+    <h1>Image Understanding</h1>
     <form>
         <input type="file" name="image" accept="image/*">
         <input type="submit" value="Process Image">
@@ -109,6 +109,7 @@
         <div id="image-container">
             <img id="image" src="#" alt="">
         </div>
+        <div id="captioned-text"></div>
         <div id="top-prediction"></div>
         <div id="chart-container">
             <canvas id="chart-canvas"></canvas>
@@ -131,12 +132,13 @@
         const chartCanvas = document.querySelector("#chart-canvas");
         const segmentedCanvas = document.querySelector("#segmented-image");
         const detectedObjectsImage = document.querySelector("#detected-objects-image");
+        const captionedText = document.getElementById("captioned-text");
         let chart;
         
         form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formData = new FormData(form);
-    const response = await fetch("http://127.0.0.1:5005/classify_segment_detect", {
+    const response = await fetch("http://127.0.0.1:5010/image_processing", {
         method: "POST",
         body: formData
     });
@@ -155,6 +157,8 @@
         image.style.display = "block";
     };
     reader.readAsDataURL(file);
+    // Update the captioned text
+    captionedText.textContent = result.captioned_image;
 
     // Display top prediction
     const topPrediction = document.querySelector("#top-prediction");

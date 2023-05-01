@@ -11,6 +11,8 @@ import torch
 import torchvision.transforms as transforms
 from torchvision.models.segmentation import deeplabv3_resnet50
 from ultralytics import YOLO
+from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
+
 
 # from torchvision.models.segmentation import deeplabv3_resnet50
 # from torchvision.models.segmentation.deeplabv3 import DeepLabV3Head, DeepLabV3, DeepLabV3Plus, DeepLabHead
@@ -72,8 +74,8 @@ def classify_image(model, image):
 # model_classification = torchvision.models.resnet50(pretrained=True)
 # model_classification.eval()
 # Load pre-trained segmentation model
-model_segmentation = deeplabv3_resnet50(pretrained=True)
-model_segmentation.eval()
+SEG_model = deeplabv3_resnet50(pretrained=True)
+SEG_model.eval()
 
 # Load pre-trained YOLOv6 model
 # Load a pretrained YOLO model (recommended for training)
@@ -88,7 +90,8 @@ def preprocess_image(image):
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     return preprocess(image)
-
+CL_image_processor = AutoImageProcessor.from_pretrained("microsoft/swinv2-base-patch4-window16-256")
+CL_model = AutoModelForImageClassification.from_pretrained("microsoft/swinv2-base-patch4-window16-256")
 # Classification function
 def classify_image(image):
 
@@ -97,13 +100,12 @@ def classify_image(image):
 
     # image_processor = AutoImageProcessor.from_pretrained("microsoft/swinv2-tiny-patch4-window8-256")
     # model = Swinv2ForImageClassification.from_pretrained("microsoft/swinv2-tiny-patch4-window8-256")
-    image_processor = AutoImageProcessor.from_pretrained("microsoft/swinv2-base-patch4-window16-256")
-    model = AutoModelForImageClassification.from_pretrained("microsoft/swinv2-base-patch4-window16-256")
+    
 
-    inputs = image_processor(image, return_tensors="pt")
+    inputs = CL_image_processor(image, return_tensors="pt")
 
     with torch.no_grad():
-        logits = model(**inputs).logits
+        logits = CL_model(**inputs).logits
         probabilities = torch.softmax(logits, dim=1)
         top5_probs, top5_indices = torch.topk(probabilities, k=5)
 
@@ -113,7 +115,7 @@ def classify_image(image):
 
     # print the top five predicted classes and their probabilities
     for i in range(5):
-        label.append(model.config.id2label[top5_indices[0][i].item()])
+        label.append(CL_model.config.id2label[top5_indices[0][i].item()])
         prob.append(top5_probs[0][i].item())
         print(f"{label[i]}: {prob[i]:.2f}")
     
@@ -128,7 +130,7 @@ def segment_image(image):
 
     # Run the segmentation model
     with torch.no_grad():
-        output = model_segmentation(input_batch)['out'][0]
+        output = SEG_model(input_batch)['out'][0]
     segmentation_map = output.argmax(0).numpy()
     segmentation_map = segmentation_map.astype('uint8')*255
     segmentation_map = Image.fromarray(segmentation_map)
@@ -150,6 +152,44 @@ def detect_objects(image):
     buffer_obd.seek(0)
 
     return buffer_obd
+
+
+
+
+
+IC_model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+feature_extractor = ViTImageProcessor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+tokenizer = AutoTokenizer.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+IC_model.to(device)
+# Object detection function
+def caption_image(image):
+
+
+    max_length = 16
+    num_beams = 4
+    gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
+    images = []
+    # for image_path in image_paths:
+    #     i_image = Image.open(image_path)
+    if image.mode != "RGB":
+       
+        image = image.convert(mode="RGB")
+
+    images.append(image)
+
+    pixel_values = feature_extractor(images=images, return_tensors="pt").pixel_values
+    pixel_values = pixel_values.to(device)
+
+    output_ids = IC_model.generate(pixel_values, **gen_kwargs)
+
+    preds = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+    preds = [pred.strip() for pred in preds]
+    return preds
+
+
+# predict_step(['/Users/skasmani/Downloads/IBM/ibm-repo/image_classification_microservice/data/test/dog.jpg']) # ['a woman in a hospital bed with a woman in a hospital bed']
 
 
 

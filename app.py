@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, jsonify, send_file
 import base64
 import numpy as np
-from model import load_image, preprocess_image, segment_image,detect_objects,classify_image
+from model import load_image, preprocess_image, segment_image,detect_objects,classify_image,caption_image
 from flask_cors import CORS
 from heapq import nlargest
 app = Flask(__name__)
@@ -13,8 +13,8 @@ with open("ImageNetLabels.txt", "r") as f:
 
 
 
-@app.route("/classify_segment_detect", methods=["POST"])
-def classify_segment_detect():
+@app.route("/image_processing", methods=["POST"])
+def image_processing():
     if 'image' in request.files:
         file = request.files['image']
     elif 'image_url' in request.json:
@@ -29,6 +29,8 @@ def classify_segment_detect():
     
     # Segmentation
     segmented_image_buffer = segment_image(image)
+    # Image captioning
+    captioned_image = caption_image(image)
 
     # Encode the segmented image buffer to base64 for sending in JSON
     segmented_image_base64 = base64.b64encode(segmented_image_buffer.getvalue()).decode("utf-8")
@@ -37,19 +39,8 @@ def classify_segment_detect():
     detected_objects_buffer = detect_objects(image)
     detected_objects_base64 = base64.b64encode(detected_objects_buffer.getvalue()).decode("utf-8")
 
-    # detected_objects = []
-    # for det in detections:
-    #     label, score, x_min, y_min, x_max, y_max = det
-    #     detected_objects.append({
-    #         "label": label,
-    #         "score": float(score),
-    #         "x_min": float(x_min),
-    #         "y_min": float(y_min),
-    #         "x_max": float(x_max),
-    #         "y_max": float(y_max)
-    #     })
 
-    return jsonify({"top_5_predictions": top_5_predictions, "segmented_image": segmented_image_base64, "detected_objects": detected_objects_base64})
+    return jsonify({"top_5_predictions": top_5_predictions, "segmented_image": segmented_image_base64, "detected_objects": detected_objects_base64,"captioned_image":captioned_image})
 
 
 
@@ -59,4 +50,4 @@ def list_files():
     return {'files': files}
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5005)
+    app.run(host='0.0.0.0', port=5010)
