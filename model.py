@@ -5,15 +5,17 @@ import numpy as np
 from PIL import Image,ImageOps
 import matplotlib.pyplot as plt
 import cv2
-from transformers import AutoImageProcessor, Swinv2ForImageClassification,AutoModelForImageClassification
+# from transformers import AutoImageProcessor, Swinv2ForImageClassification,AutoModelForImageClassification
 import torch
 # from datasets import load_dataset
 import torchvision.transforms as transforms
 from torchvision.models.segmentation import deeplabv3_resnet50
 from ultralytics import YOLO
 from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
+from transformers import DetrImageProcessor, DetrForObjectDetection, DetrConfig
+from transformers import AutoFeatureExtractor, CvtForImageClassification
 
-
+######################## Image understanding #######################
 # from torchvision.models.segmentation import deeplabv3_resnet50
 # from torchvision.models.segmentation.deeplabv3 import DeepLabV3Head, DeepLabV3, DeepLabV3Plus, DeepLabHead
 
@@ -28,8 +30,17 @@ from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoToken
 # # Set the weights argument explicitly to avoid the warning message
 # model_segmentation = deeplabv3_resnet50(pretrained=True, weights=DeepLabV3_ResNet50_Weights.DEFAULT)
 
+# Load the model architecture
+segModel = deeplabv3_resnet50(pretrained=False)
 
-def load_image(image_path_or_stream, target_size=(224, 224)):
+# Load the model weights from the local file
+segModel.load_state_dict(torch.load("/app/models/ImageUnderstanding/Segmentation/deeplabv3_resnet50_weights.pth"))
+
+# Put the model in evaluation mode
+segModel.eval()
+
+
+def load_image(image_path_or_stream, target_size=(480, 480)):
     if isinstance(image_path_or_stream, str) and (image_path_or_stream.startswith("http://") or image_path_or_stream.startswith("https://")):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36'
@@ -44,29 +55,11 @@ def load_image(image_path_or_stream, target_size=(224, 224)):
     else:
         image = Image.open(image_path_or_stream)
     
-    image = image.resize(target_size)
+    # image = image.resize(target_size)
     return image, image
     #return np.asarray(image), image
     #return preprocess_image(image), image
 
-
-# def load_model():
-#     return hub.load(model_handle)
-
-
-
-
-def classify_image(model, image):
-    # Convert the image to float32 and normalize pixel values
-    image = np.asarray(image, dtype=np.float32) / 255.0
-
-    # Add a batch dimension to the image
-    image = np.expand_dims(image, axis=0)
-
-    # Run the model on the input image
-    logits = model(image)
-    probabilities = tf.nn.softmax(logits)
-    return probabilities.numpy()
 
 
 
@@ -74,38 +67,40 @@ def classify_image(model, image):
 # model_classification = torchvision.models.resnet50(pretrained=True)
 # model_classification.eval()
 # Load pre-trained segmentation model
-SEG_model = deeplabv3_resnet50(pretrained=True)
-SEG_model.eval()
+# SEG_model = deeplabv3_resnet50(pretrained=True)
+# SEG_model.eval()
 
-# Load pre-trained YOLOv6 model
-# Load a pretrained YOLO model (recommended for training)
-model_yolo = YOLO('yolov8l.pt')
+# # Load pre-trained YOLOv6 model
+# # Load a pretrained YOLO model (recommended for training)
+# model_yolo = YOLO('yolov8l.pt')
 
 # Preprocessing function
 def preprocess_image(image):
     preprocess = transforms.Compose([
         transforms.Resize(256),
-        transforms.CenterCrop(224),
+        # transforms.CenterCrop(224),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
     return preprocess(image)
-CL_image_processor = AutoImageProcessor.from_pretrained("microsoft/swinv2-base-patch4-window16-256")
-CL_model = AutoModelForImageClassification.from_pretrained("microsoft/swinv2-base-patch4-window16-256")
+
+
+clFeature_extractor = AutoFeatureExtractor.from_pretrained("/app/models/ImageUnderstanding/ImageClassification/microsoft/cvt-21-384-22k")
+
+# Load the model from the local files
+clModel = CvtForImageClassification.from_pretrained("/app/models/ImageUnderstanding/ImageClassification/microsoft/cvt-21-384-22k")
+
+
+
 # Classification function
 def classify_image(image):
 
-    # dataset = load_dataset("huggingface/cats-image")
-    # image = dataset["test"]["image"][0]
 
-    # image_processor = AutoImageProcessor.from_pretrained("microsoft/swinv2-tiny-patch4-window8-256")
-    # model = Swinv2ForImageClassification.from_pretrained("microsoft/swinv2-tiny-patch4-window8-256")
-    
+    inputs = clFeature_extractor(images=image, return_tensors="pt")
 
-    inputs = CL_image_processor(image, return_tensors="pt")
 
     with torch.no_grad():
-        logits = CL_model(**inputs).logits
+        logits = clModel(**inputs).logits
         probabilities = torch.softmax(logits, dim=1)
         top5_probs, top5_indices = torch.topk(probabilities, k=5)
 
@@ -115,7 +110,7 @@ def classify_image(image):
 
     # print the top five predicted classes and their probabilities
     for i in range(5):
-        label.append(CL_model.config.id2label[top5_indices[0][i].item()])
+        label.append(clModel.config.id2label[top5_indices[0][i].item()])
         prob.append(top5_probs[0][i].item())
         print(f"{label[i]}: {prob[i]:.2f}")
     
@@ -130,7 +125,7 @@ def segment_image(image):
 
     # Run the segmentation model
     with torch.no_grad():
-        output = SEG_model(input_batch)['out'][0]
+        output = segModel(input_batch)['out'][0]
     segmentation_map = output.argmax(0).numpy()
     segmentation_map = segmentation_map.astype('uint8')*255
     segmentation_map = Image.fromarray(segmentation_map)
@@ -139,12 +134,30 @@ def segment_image(image):
     buffer.seek(0)
 
     return buffer
+# Load the processor from the local files
+processor_obd = DetrImageProcessor(
+    # feature_extractor_config_file="/Users/skasmani/Downloads/feature_extractor_config.json",
+    processor_config_file="/app/models/ImageUnderstanding/ObjectDetection/processor_config.json"
+)
+
+# Load the model from the local files
+config_obd = DetrConfig.from_pretrained("/app/models/ImageUnderstanding/ObjectDetection/config.json")
+model_obd = DetrForObjectDetection(config_obd)
+model_obd.load_state_dict(torch.load("/app/models/ImageUnderstanding/ObjectDetection/pytorch_model.bin"))
+
 
 # Object detection function
 def detect_objects(image):
-    with torch.no_grad():
-        detections = model_yolo(image)
-        obd_image = plot_bboxes(image, detections[0].boxes.data, score=False)
+
+
+    inputs = processor_obd(images=image, return_tensors="pt")
+    outputs = model_obd(**inputs)
+
+    # convert outputs (bounding boxes and class logits) to COCO API
+    # let's only keep detections with score > 0.9
+    target_sizes = torch.tensor([image.size[::-1]])
+    results = processor_obd.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=0.9)[0]
+    obd_image =visualise_od(image, results,model_obd)
     obd_image = obd_image.astype('uint8')
     obd_image = Image.fromarray(obd_image)
     buffer_obd = BytesIO()
@@ -157,36 +170,89 @@ def detect_objects(image):
 
 
 
-IC_model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
-feature_extractor = ViTImageProcessor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
-tokenizer = AutoTokenizer.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+# # Object detection function
+# def detect_objects(image):
+#     with torch.no_grad():
+#         detections = model_yolo(image)
+#         obd_image = plot_bboxes(image, detections[0].boxes.data, score=False)
+#     obd_image = obd_image.astype('uint8')
+#     obd_image = Image.fromarray(obd_image)
+#     buffer_obd = BytesIO()
+#     obd_image.save(buffer_obd, format="PNG")
+#     buffer_obd.seek(0)
+
+#     return buffer_obd
+
+
+
+# Load the model from the local files
+icModel = VisionEncoderDecoderModel.from_pretrained("/app/models/ImageUnderstanding/ImageCaptionning")
+
+# Load the tokenizer and feature extractor from the local files
+icTokenizer = AutoTokenizer.from_pretrained("/app/models/ImageUnderstanding/ImageCaptionning")
+icFeature_extractor = ViTImageProcessor.from_pretrained("/app/models/ImageUnderstanding/ImageCaptionning")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-IC_model.to(device)
-# Object detection function
+icModel.to(device)
+
+max_length = 16
+num_beams = 4
+gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
+
 def caption_image(image):
-
-
-    max_length = 16
-    num_beams = 4
-    gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
     images = []
     # for image_path in image_paths:
     #     i_image = Image.open(image_path)
     if image.mode != "RGB":
-       
         image = image.convert(mode="RGB")
 
     images.append(image)
 
-    pixel_values = feature_extractor(images=images, return_tensors="pt").pixel_values
+    pixel_values = icFeature_extractor(images=images, return_tensors="pt").pixel_values
     pixel_values = pixel_values.to(device)
 
-    output_ids = IC_model.generate(pixel_values, **gen_kwargs)
+    output_ids = icModel.generate(pixel_values, **gen_kwargs)
 
-    preds = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+    preds = icTokenizer.batch_decode(output_ids, skip_special_tokens=True)
     preds = [pred.strip() for pred in preds]
     return preds
+
+# pred = caption_image(['/Users/skasmani/Downloads/IBM/ibm-repo/image_classification_microservice/data/test/dog.jpg'])
+
+
+
+
+
+# IC_model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+# feature_extractor = ViTImageProcessor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+# tokenizer = AutoTokenizer.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# IC_model.to(device)
+# # Object detection function
+# def caption_image(image):
+
+
+#     max_length = 16
+#     num_beams = 4
+#     gen_kwargs = {"max_length": max_length, "num_beams": num_beams}
+#     images = []
+#     # for image_path in image_paths:
+#     #     i_image = Image.open(image_path)
+#     if image.mode != "RGB":
+       
+#         image = image.convert(mode="RGB")
+
+#     images.append(image)
+
+#     pixel_values = feature_extractor(images=images, return_tensors="pt").pixel_values
+#     pixel_values = pixel_values.to(device)
+
+#     output_ids = IC_model.generate(pixel_values, **gen_kwargs)
+
+#     preds = tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+#     preds = [pred.strip() for pred in preds]
+#     return preds
 
 
 # predict_step(['/Users/skasmani/Downloads/IBM/ibm-repo/image_classification_microservice/data/test/dog.jpg']) # ['a woman in a hospital bed with a woman in a hospital bed']
@@ -243,8 +309,100 @@ def plot_bboxes(image, boxes, labels=[], colors=[], score=True, conf=None):
   return obd_image
 
 
+def visualise_od(image, results,model):
+    # Convert the PIL Image to an OpenCV-compatible format (BGR)
+    cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    
+    # Set the font for the labels
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale =1.8
+    font_thickness = 6
+    
+    for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
+        box = [round(i, 2) for i in box.tolist()]
+        print(
+            f"Detected {model.config.id2label[label.item()]} with confidence {score.item()}"
+        )
+
+        # Get the coordinates of the bounding box and convert them to integers
+        x, y, width, height = map(int, box)
+
+        # Draw the bounding box on the image
+        cv2.rectangle(cv_image, (x, y), (x + width, y + height), (0, 0, 255), 2)
+
+        # Add a label with the class name and confidence score
+        label_text = f"{model.config.id2label[label.item()]} {score.item():.2f}"
+        (text_width, text_height), _ = cv2.getTextSize(label_text, font, font_scale, font_thickness)
+        cv2.rectangle(cv_image, (x, y - text_height), (x + text_width, y), (255, 255, 255), -1)
+        cv2.putText(cv_image, label_text, (x, y), font, font_scale, (0, 0, 0), font_thickness)
+
+    # Convert the image back to RGB format
+    cv_image_rgb = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
+
+    # Return the modified image in RGB format
+    return cv_image_rgb
 
 
 
 
+######################## Text Processing #######################
+
+
+from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification,AutoModelForSeq2SeqLM
+from transformers import   GenerationConfig
+
+# Replace the model name with the path to the downloaded model files
+emoDetModel_path = "./models/TextProcessing/classification/emotion-english-distilroberta-base/"
+# Load the tokenizer and model from the local directory
+emoDetTokenizer = AutoTokenizer.from_pretrained(emoDetModel_path)
+emoDetModel = AutoModelForSequenceClassification.from_pretrained(emoDetModel_path)
+def emotion_detection(text):
+    # Create the text classification pipeline with the local model
+    classifier = pipeline("text-classification", model=emoDetModel, tokenizer=emoDetTokenizer, return_all_scores=True)
+
+    # Use the pipeline to classify text
+    pred = classifier(text)
+    print(pred)
+    return pred
+
+
+# Replace the model name with the path to the downloaded model files
+sumModel_path = "./models/TextProcessing/summarisation/MEETING_SUMMARY/"
+# Load the tokenizer and model from the local directory
+sumTokenizer = AutoTokenizer.from_pretrained(sumModel_path)
+sumModel = AutoModelForSeq2SeqLM.from_pretrained(sumModel_path)
+
+def text_summarization(text):
+    # Create the text classification pipeline with the local model
+    summariser = pipeline("summarization", model=sumModel, tokenizer=emoDetTokenizer)
+
+    # Use the pipeline to classify text
+    summary = summariser(text)
+    print(summary)
+    return summary
+
+
+
+# Load tokenizer and model from local files
+texGenTokenizer = AutoTokenizer.from_pretrained("./models/TextProcessing/TextGeneration/t5-base", local_files_only=True)
+texGenModel = AutoModelForSeq2SeqLM.from_pretrained("./models/TextProcessing/TextGeneration/t5-base", local_files_only=True)
+
+# # Define generation config and save to file
+# translation_generation_config = GenerationConfig(
+#     num_beams=4,
+#     early_stopping=True,
+#     decoder_start_token_id=0,
+#     eos_token_id=model.config.eos_token_id,
+#     pad_token_id=model.config.pad_token_id,
+# )
+# translation_generation_config.save_pretrained("./models/TextProcessing/TextGeneration/t5-base")
+
+# Load generation config from file
+texGengeneration_config = GenerationConfig.from_pretrained("./models/TextProcessing/TextGeneration/t5-base")
+def generate_text(text):
+    # Generate translation
+    inputs = texGenTokenizer(text, return_tensors="pt")
+    outputs = texGenModel.generate(**inputs, generation_config=texGengeneration_config)
+    print(texGenTokenizer.batch_decode(outputs, skip_special_tokens=True))
+    return texGenTokenizer.batch_decode(outputs, skip_special_tokens=True)
 

@@ -1,4 +1,3 @@
-
 # README 
 
 ## AI Image and Text Understanding Application
@@ -27,8 +26,6 @@ The client is a HTML page that has a user interface for users to interact with t
 ```sh
 docker build -t ai_app .
 ```
-
-
 
 3. Run the Docker container:
 

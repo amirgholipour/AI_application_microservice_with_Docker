@@ -5,3 +5,5 @@ flask_cors
 matplotlib
 opencv-python
 ultralytics
+# transformers
+# xformers

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Understanding</title>
+    <title>AI Applications</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -22,12 +22,18 @@
         h1 {
             font-size: 2rem;
             margin-bottom: 1rem;
+            position: relative;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        nav {
             position: absolute;
             top: 1rem;
             left: 50%;
             transform: translateX(-50%);
         }
-        form {
+        #nav-container {
             background-color: rgba(0, 0, 0, 0.5);
             border-radius: 1rem;
             padding: 1rem;
@@ -35,8 +41,17 @@
             flex-direction: row;
             align-items: center;
             gap: 1rem;
-            position: absolute;
-            top: 3.5rem;
+        }
+        .application-layout > form {
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 1rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            top: 4rem;
             left: 2rem;
         }
         input[type="file"] {
@@ -84,8 +99,9 @@
         #detected-objects-container {
             width: 300px;
             height: 300px;
-            border: 2px solid white;
-            border-radius: 1rem;
+            /* border: 2px solid white;
+            border-radius: 1rem; */
+            gap: 1rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -95,38 +111,228 @@
         #detected-objects-image {
             max-width: 100%;
             max-height: 100%;
-            display: none;
+            }
+            #image-segmentation-object-detection > canvas {
+        width: 300px;
+        height: 300px;
+    }
+        .form-container {
+            position: absolute;
+            top: 60px;
+            left: 1rem;
+            }
+        .input-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 3rem;
+            }
+        /* Add this CSS to style the chart container, top emotion text, and chart */
+        #chart-container {
+            margin-top: -1rem; /* Move the container three steps upper */
         }
-    </style>
+
+        #top-emotion {
+            font-size: 2rem; /* Increase the font size of the top emotion text to make it more visible */
+            font-weight: bold; /* Make the text bold for better visibility */
+            color: #333; /* Set the text color to a darker shade for better visibility */
+        }
+
+        #chart-canvas-text {
+            min-height: 200px; /* Set a minimum height for the chart */
+        }
+        #main-container {
+            display: flex; /* Use Flexbox to align the containers */
+            justify-content: space-between; /* Add some space between the containers */
+            width: 100%;
+            }
+
+        #text-summary-container {
+            width: 50%; /* Set the width of the container */
+            padding: 1rem; /* Add some padding */
+            background-color: #113050; /* Set a light background color */
+            border: 1px solid #dee2e600; /* Add a border */
+            border-radius: 0.25rem; /* Round the corners */
+            forced-color-adjust: auto;
+            }
+        #generated-text-container {
+            width: 50%; /* Set the width of the container */
+            padding: 1rem; /* Add some padding */
+            background-color: #122130; /* Set a light background color */
+            border: 1px solid #dee2e600; /* Add a border */
+            border-radius: 0.25rem; /* Round the corners */
+            margin-bottom: 1rem; /* Add some margin at the bottom */
+        }
+
+        #generated-text {
+            width: 100%; /* Set the width of the text area to fill the container */
+            resize: none; /* Disable resizing of the text area */
+        }
+
+
+
+
+
+</style>
+
+
 </head>
 <body>
-    <h1>Image Understanding</h1>
-    <form>
-        <input type="file" name="image" accept="image/*">
-        <input type="submit" value="Process Image">
-    </form>
-    <div id="results">
-        <div id="image-container">
-            <img id="image" src="#" alt="">
+    <!-- Navigation -->
+    <nav>
+        <div id="nav-container">
+            <button id="image-understanding-btn">Image Understanding</button>
+            <button id="text-understanding-btn">Text Understanding</button>
+            <button id="voice-processing-btn">Voice Processing</button>
+            <button id="video-processing-btn">Video Processing</button>
         </div>
-        <div id="captioned-text"></div>
-        <div id="top-prediction"></div>
-        <div id="chart-container">
-            <canvas id="chart-canvas"></canvas>
+    </nav>
+
+    <!-- Image Understanding Layout -->
+    <div id="image-understanding" class="application-layout">
+        <div class="form-container">
+            <!-- The forms you provided above -->
+            <h1>Image Understanding</h1>
+            <form>
+                <input type="file" name="image" accept="image/*">
+                <input type="submit" value="Process Image">
+            </form>
         </div>
-        <div id="image-segmentation-object-detection">
-            <div id="segmented-image-container">
-                <img id="segmented-image" src="#" alt="">
+        
+        <!-- Add your existing Image Understanding HTML code here -->
+        <div id="results">
+            <!-- Add elements to display image understanding results -->
+            <div id="image-container">
+                <img id="image" src="#" alt="">
             </div>
-            <div id="detected-objects-container">
-                <img id="detected-objects-image" src="#" alt="">
+            <div id="captioned-text"></div>
+            <div id="top-prediction"></div>
+            <div id="chart-container">
+                <canvas id="chart-canvas"></canvas>
+            </div>
+            <div id="image-segmentation-object-detection">
+                <div id="segmented-image-container">
+                    <img id="segmented-image" src="#" alt="">
+                </div>
+                <div id="detected-objects-container">
+                    <img id="detected-objects-image" src="#" alt="">
+                </div>
             </div>
         </div>
     </div>
 
+    
+    <!-- Text Understanding Layout -->
+<div id="text-understanding" class="application-layout" style="display:none;">
+    <div class="form-container">
+        <!-- The forms you provided above -->
+        <h1>Text Understanding</h1>
+        <form>
+            <div class="input-group">
+                <textarea id="text" name="text" placeholder="Enter text here..." rows="10" cols="60"></textarea>
+                <input type="submit" value="Process Text">
+            </div>
+        </form>
+    </div>
+    
+    <div id="main-container">
+        <div id="chart-container">
+            <h3 id="top-emotion"></h3>
+            <canvas id="chart-canvas-text"></canvas>
+        </div>
+        <div id="generated-text-container">
+            <h3>Generated Text</h3>
+            <textarea id="generated-text" rows="4" readonly></textarea>
+        </div>
+        <div id="text-summary-container">
+            <h4>Summary:</h4>
+            <p id="text-summary"></p>
+        </div>
+    </div>
+</div>
+
+    
+    
+
+
+
+    <!-- Voice Processing Layout -->
+    <div id="voice-processing" class="application-layout" style="display:none;">
+        
+        <div class="form-container">
+            <!-- The forms you provided above -->
+            <h1>Voice Processing</h1>
+            <form>
+                <input type="file" name="audio" accept="audio/*">
+                <input type="submit" value="Process Audio">
+            </form>
+        </div>
+        
+        
+        <div id="voice-results">
+            <!-- Add elements to display voice processing results -->
+        </div>
+    </div>
+
+    <!-- Video Processing Layout -->
+    <div id="video-processing" class="application-layout" style="display:none;">
+        
+        <div class="form-container">
+            <!-- The forms you provided above -->
+            <h1>Video Processing</h1>
+            <form>
+                <input type="file" name="video" accept="video/*">
+                <input type="submit" value="Process Video">
+            </form>
+        </div>
+        
+        
+        <div id="video-results">
+            <!-- Add elements to display video processing results -->
+        </div>
+    </div>
 
     <script>
- const form = document.querySelector("form");
+        // Navigation buttons
+        const imageUnderstandingBtn = document.getElementById("image-understanding-btn");
+        const textUnderstandingBtn = document.getElementById("text-understanding-btn");
+        const voiceProcessingBtn = document.getElementById("voice-processing-btn");
+        const videoProcessingBtn = document.getElementById("video-processing-btn");
+
+        // Layout sections
+        const imageUnderstanding = document.getElementById("image-understanding");
+        const textUnderstanding = document.getElementById("text-understanding");
+        const voiceProcessing = document.getElementById("voice-processing");
+        const videoProcessing = document.getElementById("video-processing");
+
+        // Show the selected layout and hide others
+        function showLayout(selectedLayout) {
+            imageUnderstanding.style.display = "none";
+            textUnderstanding.style.display = "none";
+            voiceProcessing.style.display = "none";
+            videoProcessing.style.display = "none";
+            selectedLayout.style.display = "block";
+        }
+
+        // Event listeners for navigation buttons
+        imageUnderstandingBtn.addEventListener("click", () => {
+            showLayout(imageUnderstanding, "Image Understanding");
+        });
+
+        textUnderstandingBtn.addEventListener("click", () => {
+            showLayout(textUnderstanding, "Text Understanding");
+        });
+
+        voiceProcessingBtn.addEventListener("click", () => {
+            showLayout(voiceProcessing, "Voice Processing");
+        });
+
+        videoProcessingBtn.addEventListener("click", () => {
+            showLayout(videoProcessing, "Video Processing");
+        });
+
+        const imageForm = document.querySelector("#image-understanding form");
+        const imageResults = document.querySelector("#image-results");
+        // const form = document.querySelector("form");
         const image = document.querySelector("#image");
         const predictionsList = document.querySelector("#predictions");
         const chartCanvas = document.querySelector("#chart-canvas");
@@ -134,54 +340,187 @@
         const detectedObjectsImage = document.querySelector("#detected-objects-image");
         const captionedText = document.getElementById("captioned-text");
         let chart;
-        
-        form.addEventListener("submit", async (event) => {
+
+        imageForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const formData = new FormData(imageForm);
+            const response = await fetch("http://127.0.0.1:5020/image_processing", {
+                method: "POST",
+                body: formData
+            });
+            const result = await response.json();
+            if (result.error) {
+                alert(result.error);
+                return;
+            }
+
+            // Display selected image
+            const fileInput = imageForm.querySelector('input[type="file"]');
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            // reader.onload = (e) => {
+            //     image.src = e.target.result;
+            //     image.style.display = "block";
+            // };
+
+            reader.onload = (e) => {
+                const img = new Image();
+                img.src = e.target.result;
+
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // // Set canvas dimensions to half the image size
+                    // canvas.width = img.width / 3;
+                    // canvas.height = img.height / 3;
+
+                    canvas.width = 240;
+                    canvas.height = 360;
+
+                    // Draw image on the canvas with 50% reduced size
+                    ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, canvas.width, canvas.height);
+
+                    // Set the reduced image as the source of the image element
+                    image.src = canvas.toDataURL();
+                    image.style.display = "block";
+                };
+            };
+            reader.readAsDataURL(file);
+            // Update the captioned text
+            captionedText.textContent = result.captioned_image;
+
+            // Display top prediction
+            const topPrediction = document.querySelector("#top-prediction");
+            topPrediction.textContent = `Top Prediction: ${result.top_5_predictions[0][0]} (${(result.top_5_predictions[0][1] * 100).toFixed(2)}%)`;
+
+            // Update chart
+            if (chart) {
+                chart.destroy();
+            }
+            const ctx = chartCanvas.getContext("2d");
+            const chartLabels = [];
+            const chartData = [];
+            for (const prediction of result.top_5_predictions) {
+                chartLabels.push(prediction[0]);
+                chartData.push((prediction[1] * 100).toFixed(2));
+            }
+            chart = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: "Top 5 Predictions",
+                        data: chartData,
+                        backgroundColor: [
+                            "rgba(255, 99, 132, 0.2)",
+                            "rgba(255, 159, 64, 0.2)",
+                            "rgba(255, 205, 86, 0.2)",
+                            "rgba(75, 192, 192, 0.2)",
+                            "rgba(153, 102, 255, 0.2)"
+                        ],
+                        borderColor: [
+                            "rgba(255, 99, 132, 1)",
+                            "rgba(255, 159, 64, 1)",
+                            "rgba(255, 205, 86, 1)",
+                            "rgba(75, 192, 192, 1)",
+                            "rgba(153, 102, 255, 1)"
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    elements: {
+                        bar: {
+                            borderRadius: 5,
+                            borderColor: "rgba(255, 255, 255, 0.5)",
+                            borderWidth(context) {
+                                const dataset = context.chart.data.datasets[context.datasetIndex];
+                                const index = context.dataIndex;
+                                const value = dataset.data[index];
+                                return value === Math.max(...dataset.data) ? 2 : 0;
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Display segmented image
+            const segmentedImage = document.querySelector("#segmented-image");
+            segmentedImage.src = "data:image/png;base64," + result.segmented_image;
+            segmentedImage.style.width = "360x";
+            segmentedImage.style.height = "240px";
+            segmentedImage.style.display = "block";
+            
+
+            // Display detected objects image
+            const detectedObjectsBase64 = result.detected_objects;
+            detectedObjectsImage.src = "data:image/png;base64," + detectedObjectsBase64;
+            detectedObjectsImage.style.width = "360x";
+            detectedObjectsImage.style.height = "240px";
+            detectedObjectsImage.style.display = "block";
+
+        });    
+                
+        const textForm = document.querySelector("#text-understanding form");
+const textSummaryElement = document.querySelector("#text-summary");
+const textChartCanvas = document.querySelector("#chart-canvas-text");
+const topEmotion = document.querySelector("#top-emotion");
+const generatedTextElement = document.querySelector("#generated-text");
+let textChart;
+
+textForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const formData = new FormData(form);
-    const response = await fetch("http://127.0.0.1:5010/image_processing", {
+    const text = document.querySelector("#text").value;
+    const response = await fetch("http://127.0.0.1:5020/text_processing", {
         method: "POST",
-        body: formData
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text })
     });
+
     const result = await response.json();
     if (result.error) {
         alert(result.error);
         return;
     }
-
-    // Display selected image
-    const fileInput = form.querySelector('input[type="file"]');
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        image.src = e.target.result;
-        image.style.display = "block";
-    };
-    reader.readAsDataURL(file);
-    // Update the captioned text
-    captionedText.textContent = result.captioned_image;
-
-    // Display top prediction
-    const topPrediction = document.querySelector("#top-prediction");
-    topPrediction.textContent = `Top Prediction: ${result.top_5_predictions[0][0]} (${(result.top_5_predictions[0][1] * 100).toFixed(2)}%)`;
-
+    
+    // Update the top emotion
+    const sortedEmotions = result.emotion_predictions.sort((a, b) => b.score - a.score);
+    topEmotion.textContent = `Top Emotion: ${sortedEmotions[0].label} (${(sortedEmotions[0].score * 100).toFixed(2)}%)`;
+    // Display the text summary
+    textSummaryElement.textContent = result.text_summary.summary_text;
+    
+    generatedTextElement.value = result.generated_text.join(" ");
     // Update chart
-    if (chart) {
-        chart.destroy();
+    if (textChart) {
+        textChart.destroy();
     }
-    const ctx = chartCanvas.getContext("2d");
-    const chartLabels = [];
-    const chartData = [];
-    for (const prediction of result.top_5_predictions) {
-        chartLabels.push(prediction[0]);
-        chartData.push((prediction[1] * 100).toFixed(2));
+    const textChartCtx = textChartCanvas.getContext("2d");
+    const textChartLabels = [];
+    const textChartData = [];
+    for (const emotion of sortedEmotions) {
+        textChartLabels.push(emotion.label);
+        textChartData.push((emotion.score * 100).toFixed(2));
     }
-    chart = new Chart(ctx, {
+    textChart = new Chart(textChartCtx, {
         type: "bar",
         data: {
-            labels: chartLabels,
+            labels: textChartLabels,
             datasets: [{
-                label: "Top 5 Predictions",
-                data: chartData,
+                label: "Emotions",
+                data: textChartData,
                 backgroundColor: [
                     "rgba(255, 99, 132, 0.2)",
                     "rgba(255, 159, 64, 0.2)",
@@ -224,17 +563,44 @@
             }
         }
     });
+});
 
-    // Display segmented image
-    const segmentedImage = document.querySelector("#segmented-image");
-    segmentedImage.src = "data:image/png;base64," + result.segmented_image;
-    segmentedImage.style.display = "block";
 
-    // Display detected objects image
-    const detectedObjectsBase64 = result.detected_objects;
-    detectedObjectsImage.src = "data:image/png;base64," + detectedObjectsBase64;
-    detectedObjectsImage.style.display = "block";
 
-});    </script>
+
+
+
+
+        // Voice Processing Form Submission
+        const voiceForm = document.querySelector("#voice-processing form");
+        const voiceResults = document.querySelector("#voice-results");
+        voiceForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const formData = new FormData(voiceForm);
+            // Replace with your API endpoint for voice processing
+            const response = await fetch("http://127.0.0.1:5020/voice_processing", {
+                method: "POST",
+                body: formData
+            });
+            const result = await response.json();
+            // Update the voiceResults element with the results
+        });
+
+        // Video Processing Form Submission
+        const videoForm = document.querySelector("#video-processing form");
+        const videoResults = document.querySelector("#video-results");
+        videoForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const formData = new FormData(videoForm);
+            // Replace with your API endpoint for video processing
+            const response = await fetch("http://127.0.0.1:5020/video_processing", {
+                method: "POST",
+                body: formData
+            });
+            const result = await response.json();
+            // Update the videoResults element with the results
+        });
+    </script>
 </body>
-</html>    
+</html>
+

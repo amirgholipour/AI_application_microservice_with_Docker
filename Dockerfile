@@ -20,12 +20,14 @@ RUN pip install --upgrade --force-reinstall torch torchvision
 RUN pip install git+https://github.com/huggingface/transformers
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
 RUN pip3 install opencv-python-headless==4.5.3.56
+RUN pip install timm
 
 # Copy the rest of your application code into the container
 # COPY . .
-COPY data /app
+COPY models /app/models
+COPY data /app/data
 COPY ImageNetLabels.txt /app/ImageNetLabels.txt
-COPY yolov8l.pt /app/yolov8l.pt
+#COPY yolov8l.pt /app/yolov8l.pt
 COPY model.py /app/model.py
 #COPY inference.py /app/inference.py
 COPY app.py /app/app.py
@@ -33,5 +35,6 @@ RUN rm -rf /tmp/*
 # Expose the port the app runs on
 EXPOSE 5000
 
+RUN ls
 # Start the application
 CMD ["python", "app.py"]

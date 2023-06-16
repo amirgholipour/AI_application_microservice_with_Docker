@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify, send_file
 import base64
 import numpy as np
 from model import load_image, preprocess_image, segment_image,detect_objects,classify_image,caption_image
+from model import emotion_detection,text_summarization,generate_text
+
 from flask_cors import CORS
 from heapq import nlargest
 app = Flask(__name__)
@@ -42,6 +44,19 @@ def image_processing():
 
     return jsonify({"top_5_predictions": top_5_predictions, "segmented_image": segmented_image_base64, "detected_objects": detected_objects_base64,"captioned_image":captioned_image})
 
+@app.route("/text_processing", methods=["POST"])
+def text_processing():
+    if 'text' in request.json:
+        text = request.json['text']
+    else:
+        return jsonify({"error": "No text provided"}), 400
+
+    # Emotion detection
+    emotion_predictions = emotion_detection(text)
+    text_summary = text_summarization(text)
+    generated_text = generate_text(text)
+
+    return jsonify({"emotion_predictions": emotion_predictions[0],"text_summary": text_summary[0],"generated_text": generated_text })
 
 
 @app.route('/list_files')
@@ -50,4 +65,5 @@ def list_files():
     return {'files': files}
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5010)
+    app.run(host='0.0.0.0', port=5020)
+
